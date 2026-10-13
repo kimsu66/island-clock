@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="섬 시계">
+<title>섬 시계</title>
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="manifest" href="manifest.json">
+<style>
+  :root {
+    --ink: rgba(255,255,255,0.88);
+    --glow: rgba(255,255,255,0.55);
+    --bg: #7fb3e8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #1d3550; }
+  }
+  :root[data-theme="dark"] { --bg: #1d3550; }
+
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: var(--bg);
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  video {
+    position: fixed; inset: 0;
+    width: 100vw; height: 100vh; height: 100dvh;
+    object-fit: cover;
+    pointer-events: none;
+  }
+  .clock {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    font-family: -apple-system, "SF Pro Display", system-ui, "Apple SD Gothic Neo", sans-serif;
+    color: var(--ink);
+    text-shadow: 0 0 0.12em var(--glow), 0 0.04em 0.18em rgba(40,70,110,0.25);
+    line-height: 1;
+    padding-bottom: 22vh;
+  }
+  .date {
+    font-size: min(7.5vh, 4.6vw);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    white-space: pre;
+    color: rgba(255,255,255,0.95);
+    text-shadow: 0 1px 6px rgba(40,60,110,0.25);
+    margin-bottom: 3vh;
+  }
+  .time {
+    font-size: min(58vh, 30vw);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    transform: scaleY(1.32);
+    transform-origin: center top;
+    /* 잠금화면 시계 같은 반투명 유리 느낌 */
+    color: transparent;
+    background: linear-gradient(180deg, rgba(236,236,255,0.88) 0%, rgba(225,228,255,0.72) 60%, rgba(255,240,220,0.62) 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-stroke: 1px rgba(255,255,255,0.55);
+    text-shadow: none;
+    filter: drop-shadow(0 2px 6px rgba(50,60,120,0.18));
+  }
+  .hint {
+    position: fixed; left: 50%; bottom: max(14px, env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    font: 13px/1.4 -apple-system, "Apple SD Gothic Neo", sans-serif;
+    color: #fff; background: rgba(0,0,0,0.35);
+    padding: 6px 12px; border-radius: 999px;
+    transition: opacity .6s; white-space: nowrap;
+  }
+  .hint.off { opacity: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+  <video id="bg" src="bg.mp4" autoplay muted loop playsinline webkit-playsinline preload="auto"></video>
+
+  <div class="clock">
+    <div class="date" id="date"></div>
+    <div class="time" id="time"></div>
+  </div>
+
+  <div class="hint" id="hint">화면을 한 번 탭하면 화면 꺼짐 방지가 켜져요</div>
+
+<script>
+  const days = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  const dateEl = document.getElementById('date');
+  const timeEl = document.getElementById('time');
+  const pad = n => String(n).padStart(2, '0');
+
+  function tick() {
+    const d = new Date();
+    dateEl.textContent =
+      pad(d.getFullYear() % 100) + ' ' + pad(d.getMonth() + 1) + ' ' + pad(d.getDate()) + '  ' + days[d.getDay()];
+    const h = d.getHours() % 12 || 12;
+    timeEl.textContent = h + ':' + pad(d.getMinutes());
+    setTimeout(tick, 1000 - d.getMilliseconds() + 5);
+  }
+  tick();
+
+  // 영상 재생 보장 (iOS에서 가끔 자동재생이 멈출 때 대비)
+  const video = document.getElementById('bg');
+  const play = () => { const p = video.play(); if (p) p.catch(() => {}); };
+  play();
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { play(); lock(); } });
+
+  // 화면 꺼짐 방지
+  let wakeLock = null;
+  async function lock() {
+    try {
+      if ('wakeLock' in navigator && !wakeLock) {
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', () => { wakeLock = null; });
+      }
+    } catch (e) {}
+  }
+  const hint = document.getElementById('hint');
+  document.addEventListener('click', () => { play(); lock(); hint.classList.add('off'); });
+  setTimeout(() => hint.classList.add('off'), 6000);
+</script>
+</body>
+</html>
