@@ -32,7 +32,10 @@
     width: 100%; height: 100%;
     object-fit: cover;
     pointer-events: none;
+    opacity: 0;
+    transition: opacity .8s ease;
   }
+  video.on { opacity: 1; }
   #app {
     position: relative;
     width: 100%; height: 100%;
@@ -85,7 +88,8 @@
 </head>
 <body>
 <div id="app">
-  <video id="bg" src="bg.mp4" autoplay muted loop playsinline webkit-playsinline preload="auto"></video>
+  <video id="vA" class="bg on" autoplay muted playsinline webkit-playsinline preload="auto"></video>
+  <video id="vB" class="bg" muted playsinline webkit-playsinline preload="auto"></video>
 
   <div class="clock">
     <div class="date" id="date"></div>
@@ -111,11 +115,62 @@
   }
   tick();
 
-  // 영상 재생 보장 (iOS에서 가끔 자동재생이 멈출 때 대비)
-  const video = document.getElementById('bg');
-  const play = () => { const p = video.play(); if (p) p.catch(() => {}); };
-  play();
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) { play(); lock(); } });
+  // ── 시간대별 영상 ──────────────────────────────
+  // 오전 10시 ~ 오후 1시 : 기존 영상 → 10시 영상 번갈아 무한반복
+  // 오후 1시 ~ 오후 4시  : 1시 영상 무한반복
+  // 오후 4시 ~ 다음날 오전 10시 : 4시 영상 무한반복
+  function playlistFor(d) {
+    const h = d.getHours();
+    if (h >= 10 && h < 13) return ['bg.mp4', 'am10.mp4'];
+    if (h >= 13 && h < 16) return ['pm1.mp4'];
+    return ['pm4.mp4'];
+  }
+
+  let cur = document.getElementById('vA');
+  let nxt = document.getElementById('vB');
+  let list = [], idx = 0;
+
+  const play = v => { const p = v.play(); if (p) p.catch(() => {}); };
+
+  // 다음 영상을 뒤에 준비해 두었다가 자연스럽게 바꿔치기
+  function swapTo(src) {
+    nxt.loop = (list.length === 1);
+    if (!nxt.src.endsWith(src)) { nxt.src = src; nxt.load(); }
+    nxt.currentTime = 0;
+    play(nxt);
+    nxt.classList.add('on');
+    cur.classList.remove('on');
+    const old = cur; cur = nxt; nxt = old;
+    setTimeout(() => { old.pause(); preloadNext(); }, 900);
+  }
+  function preloadNext() {
+    if (list.length > 1) {
+      const src = list[(idx + 1) % list.length];
+      if (!nxt.src.endsWith(src)) { nxt.src = src; nxt.load(); }
+    }
+  }
+  function onEnded(e) {
+    if (e.target !== cur || list.length < 2) return;
+    idx = (idx + 1) % list.length;
+    swapTo(list[idx]);
+  }
+  document.getElementById('vA').addEventListener('ended', onEnded);
+  document.getElementById('vB').addEventListener('ended', onEnded);
+
+  function checkSchedule() {
+    const l = playlistFor(new Date());
+    if (l.join() !== list.join()) {
+      list = l; idx = 0;
+      if (!cur.src) {                 // 처음 열 때
+        cur.src = list[0]; cur.loop = (list.length === 1); play(cur); preloadNext();
+      } else {
+        swapTo(list[0]);
+      }
+    }
+  }
+  checkSchedule();
+  setInterval(checkSchedule, 5000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkSchedule(); play(cur); lock(); } });
 
   // 화면 꺼짐 방지
   let wakeLock = null;
@@ -128,7 +183,7 @@
     } catch (e) {}
   }
   const hint = document.getElementById('hint');
-  document.addEventListener('click', () => { play(); lock(); hint.classList.add('off'); });
+  document.addEventListener('click', () => { play(cur); lock(); hint.classList.add('off'); });
   setTimeout(() => hint.classList.add('off'), 6000);
 </script>
 </body>
