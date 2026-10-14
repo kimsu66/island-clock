@@ -23,13 +23,17 @@
 
   html, body {
     margin: 0; height: 100%; overflow: hidden;
+    background-color: #5b8a3a;
     background: var(--bg);
     -webkit-user-select: none; user-select: none;
     -webkit-tap-highlight-color: transparent;
   }
   video {
-    position: fixed; inset: 0;
-    width: 100vw; height: 100vh; height: 100dvh;
+    position: fixed; top: 0; left: 0;
+    width: 100vw;
+    /* 홈 화면 앱(세로)에서 아래가 비는 iOS 버그 대비: 상태바·홈바 영역까지 덮도록 넉넉히 */
+    height: calc(100vh + env(safe-area-inset-top) + env(safe-area-inset-bottom));
+    min-height: 100lvh;
     object-fit: cover;
     pointer-events: none;
   }
