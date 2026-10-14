@@ -14,16 +14,15 @@
   :root {
     --ink: rgba(255,255,255,0.88);
     --glow: rgba(255,255,255,0.55);
-    --bg: #7fb3e8;
+    --bg: #7da544;
   }
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { --bg: #1d3550; }
+    :root:not([data-theme="light"]) { --bg: #7da544; }
   }
-  :root[data-theme="dark"] { --bg: #1d3550; }
+  :root[data-theme="dark"] { --bg: #7da544; }
 
   html, body {
     margin: 0; height: 100%; overflow: hidden;
-    background-color: #5b8a3a;
     background: var(--bg);
     -webkit-user-select: none; user-select: none;
     -webkit-tap-highlight-color: transparent;
@@ -108,8 +107,21 @@
   }
   tick();
 
+  // 홈 화면 앱에서 화면 높이를 짧게 계산하는 iOS 버그 대비: 실제 기기 화면 크기로 영상 크기를 맞춤
+  function fit() {
+    const a = screen.width, b = screen.height;
+    const portrait = window.innerHeight >= window.innerWidth;
+    const w = portrait ? Math.min(a, b) : Math.max(a, b);
+    const h = portrait ? Math.max(a, b) : Math.min(a, b);
+    video.style.width = Math.max(w, window.innerWidth) + 'px';
+    video.style.height = Math.max(h, window.innerHeight) + 'px';
+  }
+
   // 영상 재생 보장 (iOS에서 가끔 자동재생이 멈출 때 대비)
   const video = document.getElementById('bg');
+  fit();
+  window.addEventListener('resize', fit);
+  window.addEventListener('orientationchange', () => setTimeout(fit, 300));
   const play = () => { const p = video.play(); if (p) p.catch(() => {}); };
   play();
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { play(); lock(); } });
