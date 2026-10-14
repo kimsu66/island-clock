@@ -28,16 +28,18 @@
     -webkit-tap-highlight-color: transparent;
   }
   video {
-    position: fixed; top: 0; left: 0;
-    width: 100vw;
-    /* 홈 화면 앱(세로)에서 아래가 비는 iOS 버그 대비: 상태바·홈바 영역까지 덮도록 넉넉히 */
-    height: calc(100vh + env(safe-area-inset-top) + env(safe-area-inset-bottom));
-    min-height: 100lvh;
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
     object-fit: cover;
     pointer-events: none;
   }
+  #app {
+    position: relative;
+    width: 100%; height: 100%;
+    overflow: hidden;
+  }
   .clock {
-    position: fixed; inset: 0;
+    position: absolute; inset: 0;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
     font-family: -apple-system, "SF Pro Display", system-ui, "Apple SD Gothic Neo", sans-serif;
@@ -71,7 +73,7 @@
     filter: drop-shadow(0 2px 6px rgba(50,60,120,0.18));
   }
   .hint {
-    position: fixed; left: 50%; bottom: max(14px, env(safe-area-inset-bottom));
+    position: absolute; left: 50%; bottom: max(14px, env(safe-area-inset-bottom));
     transform: translateX(-50%);
     font: 13px/1.4 -apple-system, "Apple SD Gothic Neo", sans-serif;
     color: #fff; background: rgba(0,0,0,0.35);
@@ -82,6 +84,7 @@
 </style>
 </head>
 <body>
+<div id="app">
   <video id="bg" src="bg.mp4" autoplay muted loop playsinline webkit-playsinline preload="auto"></video>
 
   <div class="clock">
@@ -90,6 +93,7 @@
   </div>
 
   <div class="hint" id="hint">화면을 한 번 탭하면 화면 꺼짐 방지가 켜져요</div>
+</div>
 
 <script>
   const days = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
@@ -107,21 +111,8 @@
   }
   tick();
 
-  // 홈 화면 앱에서 화면 높이를 짧게 계산하는 iOS 버그 대비: 실제 기기 화면 크기로 영상 크기를 맞춤
-  function fit() {
-    const a = screen.width, b = screen.height;
-    const portrait = window.innerHeight >= window.innerWidth;
-    const w = portrait ? Math.min(a, b) : Math.max(a, b);
-    const h = portrait ? Math.max(a, b) : Math.min(a, b);
-    video.style.width = Math.max(w, window.innerWidth) + 'px';
-    video.style.height = Math.max(h, window.innerHeight) + 'px';
-  }
-
   // 영상 재생 보장 (iOS에서 가끔 자동재생이 멈출 때 대비)
   const video = document.getElementById('bg');
-  fit();
-  window.addEventListener('resize', fit);
-  window.addEventListener('orientationchange', () => setTimeout(fit, 300));
   const play = () => { const p = video.play(); if (p) p.catch(() => {}); };
   play();
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { play(); lock(); } });

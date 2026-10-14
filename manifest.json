@@ -1,1 +1,1 @@
-{"name":"섬 시계","short_name":"섬 시계","start_url":".","display":"fullscreen","orientation":"landscape","background_color":"#7da544","theme_color":"#7da544","icons":[{"src":"icon.png","sizes":"512x512","type":"image/png"}]}
+{"name":"섬 시계","short_name":"섬 시계","start_url":".","display":"standalone","background_color":"#7da544","theme_color":"#7da544","icons":[{"src":"icon.png","sizes":"512x512","type":"image/png"}]}
