@@ -136,14 +136,14 @@
   document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
 
   // ── 시간대별 영상 ──────────────────────────────
-  // 오전 8시 ~ 10시  : 8시 영상 두 개 번갈아 무한반복
+  // 오전 7시 ~ 10시  : 8시 영상 두 개 번갈아 무한반복
   // 오전 10시 ~ 오후 1시 : 기존 영상 → 10시 영상 번갈아 무한반복
   // 오후 1시 ~ 4시  : 1시 영상 무한반복
   // 오후 4시 ~ 10시 : 4시 영상 무한반복
-  // 오후 10시 ~ 다음날 오전 8시 : 밤 영상 무한반복
+  // 오후 10시 ~ 다음날 오전 7시 : 밤 영상 무한반복
   function playlistFor(d) {
     const h = d.getHours();
-    if (h >= 8 && h < 10)  return ['am8a.mp4', 'am8b.mp4'];
+    if (h >= 7 && h < 10)  return ['am8a.mp4', 'am8b.mp4'];
     if (h >= 10 && h < 13) return ['bg.mp4', 'am10.mp4'];
     if (h >= 13 && h < 16) return ['pm1.mp4'];
     if (h >= 16 && h < 22) return ['pm4.mp4'];
