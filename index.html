@@ -135,18 +135,28 @@
   window.addEventListener('scroll', () => { if (window.scrollY) window.scrollTo(0, 0); });
   document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
 
-  // ── 시간대별 영상 ──────────────────────────────
-  // 오전 7시 ~ 10시  : 8시 영상 두 개 번갈아 무한반복
-  // 오전 10시 ~ 오후 1시 : 기존 영상 → 10시 영상 번갈아 무한반복
-  // 오후 1시 ~ 4시  : 1시 영상 무한반복
-  // 오후 4시 ~ 10시 : 4시 영상 무한반복
-  // 오후 10시 ~ 다음날 오전 7시 : 밤 영상 무한반복
+  // ── 시간대별 영상 (촬영 시각 기준) ─────────────────
+  // 오전 7시  ~ 8시  : 7시 영상
+  // 오전 8시  ~ 9시  : 8시 영상 두 개 번갈아
+  // 오전 9시  ~ 10시 : 9시 영상
+  // 오전 10시 ~ 오후 1시 : 기존 영상 → 10시 영상 번갈아
+  // 오후 1시  ~ 2시  : 1시 영상
+  // 오후 2시  ~ 4시  : 2시 영상
+  // 오후 4시  ~ 5시  : 4시 영상 두 개 번갈아
+  // 오후 5시  ~ 6시  : 5시 영상
+  // 오후 6시  ~ 10시 : 6시(저녁) 영상
+  // 오후 10시 ~ 다음날 오전 7시 : 밤 영상
   function playlistFor(d) {
     const h = d.getHours();
-    if (h >= 7 && h < 10)  return ['am8a.mp4', 'am8b.mp4'];
+    if (h >= 7 && h < 8)   return ['am7.mp4'];
+    if (h >= 8 && h < 9)   return ['am8a.mp4', 'am8b.mp4'];
+    if (h >= 9 && h < 10)  return ['am9.mp4'];
     if (h >= 10 && h < 13) return ['bg.mp4', 'am10.mp4'];
-    if (h >= 13 && h < 16) return ['pm1.mp4'];
-    if (h >= 16 && h < 22) return ['pm4.mp4'];
+    if (h >= 13 && h < 14) return ['pm1.mp4'];
+    if (h >= 14 && h < 16) return ['pm2.mp4'];
+    if (h >= 16 && h < 17) return ['pm4.mp4', 'pm4b.mp4'];
+    if (h >= 17 && h < 18) return ['pm5.mp4'];
+    if (h >= 18 && h < 22) return ['pm6.mp4'];
     return ['pm10.mp4'];
   }
 
