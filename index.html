@@ -135,7 +135,8 @@
     padding: 10px; border-radius: 18px;
     background: rgba(20,30,50,0.5);
     -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
-    display: flex; gap: 10px;
+    display: flex; flex-direction: column; gap: 12px;
+    max-width: calc(100vw - 36px); box-sizing: border-box;
     font: 600 13px/1.2 -apple-system, "Apple SD Gothic Neo", sans-serif;
     color: #fff;
     opacity: 0; pointer-events: none; transform: translateY(-6px);
@@ -158,6 +159,38 @@
   .mini.c i:nth-child(2) { left: 22px; top: 15px; width: 40px; height: 16px; opacity: .8; }
   .mini.r i:nth-child(1) { right: 26px; top: 7px; width: 18px; height: 3px; }
   .mini.r i:nth-child(2) { right: 6px;  top: 6px; width: 16px; height: 5px; }
+  .sec-h {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    font-size: 12px; font-weight: 600; opacity: .85; margin: 0 2px 7px;
+  }
+  .row { display: flex; gap: 10px; }
+  .row.vers { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; }
+  .row.vers::-webkit-scrollbar { display: none; }
+  .edit-btn {
+    border: 0; border-radius: 999px; padding: 4px 10px;
+    background: rgba(255,255,255,0.18); color: #fff;
+    font: 600 12px/1.2 -apple-system, "Apple SD Gothic Neo", sans-serif;
+  }
+  .edit-btn.on { background: #fff; color: #1d2a40; }
+  .ver { flex: none; cursor: pointer; }
+  .ver .thumb {
+    width: 84px; height: 48px; border-radius: 6px;
+    background: #7da544 center/cover no-repeat; position: relative;
+  }
+  .ver .thumb b {
+    position: absolute; left: 4px; top: 4px; padding: 1px 5px; border-radius: 4px;
+    background: rgba(0,0,0,.45); font-size: 10px; font-weight: 700; letter-spacing: .04em;
+  }
+  .ver input {
+    display: none; width: 84px; box-sizing: border-box;
+    border: 0; border-radius: 6px; padding: 3px 4px;
+    font: 600 16px/1.2 -apple-system, "Apple SD Gothic Neo", sans-serif;
+    text-align: center; color: #1d2a40; background: #fff;
+    -webkit-user-select: text; user-select: text;
+  }
+  .panel.editing .ver[data-v]:not([data-v="auto"]) input { display: block; }
+  .panel.editing .ver[data-v]:not([data-v="auto"]) .lbl { display: none; }
+  .panel.editing .ver[data-v="auto"] { opacity: .4; }
 </style>
 </head>
 <body>
@@ -170,12 +203,21 @@
     <div class="time" id="time"></div>
   </div>
 
-  <button class="menu-btn" id="menuBtn" aria-label="시계 모양 선택">
+  <button class="menu-btn" id="menuBtn" aria-label="메뉴">
     <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
   </button>
   <div class="panel" id="panel">
-    <button class="opt" data-layout="center"><span class="mini c"><i></i><i></i></span>가운데</button>
-    <button class="opt" data-layout="corner"><span class="mini r"><i></i><i></i></span>오른쪽 위</button>
+    <div class="sec">
+      <div class="sec-h">시계 모양</div>
+      <div class="row">
+        <button class="opt" data-layout="center"><span class="mini c"><i></i><i></i></span>가운데</button>
+        <button class="opt" data-layout="corner"><span class="mini r"><i></i><i></i></span>오른쪽 위</button>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="sec-h">섬 영상 <button class="edit-btn" id="editBtn">이름 수정</button></div>
+      <div class="row vers" id="vers"></div>
+    </div>
   </div>
 
   <div class="hint" id="hint">화면을 탭하면 메뉴가 나와요</div>
@@ -213,40 +255,58 @@
   window.addEventListener('resize', fit);
   window.addEventListener('orientationchange', () => { fit(); setTimeout(fit, 400); });
   window.addEventListener('scroll', () => { if (window.scrollY) window.scrollTo(0, 0); });
-  document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+  document.addEventListener('touchmove', e => { if (!e.target.closest('.panel')) e.preventDefault(); }, { passive: false });
 
-  // ── 시간대별 영상 ──────────────────────────────
-  // 2026-11-15부터: 11월 영상 (촬영 시각 기준, 매시 정각에 바뀜)
-  //   오전 7시 ~ 오후 6시 : 그 시간에 찍은 영상 (nov/h07 ~ nov/h17)
-  //   오후 6시 ~ 다음날 오전 7시 : 밤 영상 (nov/h18)
-  const NOV_START = new Date(2026, 10, 15);   // 2026-11-15 00:00 (기기 시간 기준)
-  // 2026-11-22부터: 11월 22일 영상 (촬영 시각 기준)
-  //   오전 7시 ~ 오후 4시 : 매시간 그 시간 영상
-  //   4시 : 4시 영상 두 개 번갈아 / 5시 : 5시 영상 / 오후 6시 ~ 다음날 오전 7시 : 밤 영상
-  const NOV22_START = new Date(2026, 10, 22);
+  // ── 섬 영상 버전 ──────────────────────────────
+  // 새 버전을 추가할 때: VERSIONS 맨 뒤에 하나 추가 (from = 자동 모드에서 쓰기 시작하는 날짜)
+  // 각 버전의 schedule(h)는 시각(0~23)을 받아 그 시간에 틀 영상 목록을 돌려줌 (여러 개면 번갈아)
+  const VERSIONS = [
+    { id: 'oct', label: '10월', from: new Date(2026, 9, 13), thumb: 'thumbs/oct.jpg',
+      schedule(h) {
+        if (h >= 7 && h < 8)   return ['am7.mp4'];
+        if (h >= 8 && h < 9)   return ['am8a.mp4', 'am8b.mp4'];
+        if (h >= 9 && h < 10)  return ['am9.mp4'];
+        if (h >= 10 && h < 13) return ['bg.mp4', 'am10.mp4'];
+        if (h >= 13 && h < 14) return ['pm1.mp4'];
+        if (h >= 14 && h < 16) return ['pm2.mp4'];
+        if (h >= 16 && h < 17) return ['pm4.mp4', 'pm4b.mp4'];
+        if (h >= 17 && h < 18) return ['pm5.mp4'];
+        if (h >= 18 && h < 22) return ['pm6.mp4'];
+        return ['pm10.mp4'];
+      } },
+    { id: 'nov15', label: '11월 15일', from: new Date(2026, 10, 15), thumb: 'thumbs/nov15.jpg',
+      schedule(h) {
+        if (h >= 7 && h < 18) return ['nov/h' + pad(h) + '.mp4'];
+        return ['nov/h18.mp4'];
+      } },
+    { id: 'nov22', label: '11월 22일', from: new Date(2026, 10, 22), thumb: 'thumbs/nov22.jpg',
+      schedule(h) {
+        if (h >= 7 && h < 16) return ['nov22/h' + pad(h) + '.mp4'];
+        if (h === 16)         return ['nov22/h16a.mp4', 'nov22/h16b.mp4'];
+        if (h === 17)         return ['nov22/h17.mp4'];
+        return ['nov22/h18.mp4'];
+      } },
+  ];
+
+  const store = {
+    get(k, def) { try { const v = localStorage.getItem(k); return v === null ? def : v; } catch (e) { return def; } },
+    set(k, v)   { try { localStorage.setItem(k, v); } catch (e) {} },
+  };
+  let chosen = store.get('islandVersion', 'auto');           // 'auto' 또는 버전 id
+  let names = {};
+  try { names = JSON.parse(store.get('islandVersionNames', '{}')) || {}; } catch (e) {}
+  const nameOf = v => names[v.id] || v.label;
+
+  function autoVersion(d) {
+    let pick = VERSIONS[0];
+    for (const v of VERSIONS) if (d >= v.from) pick = v;
+    return pick;
+  }
+  function activeVersion(d) {
+    return VERSIONS.find(v => v.id === chosen) || autoVersion(d);
+  }
   function playlistFor(d) {
-    const h = d.getHours();
-    if (d >= NOV22_START) {
-      if (h >= 7 && h < 16)  return ['nov22/h' + pad(h) + '.mp4'];
-      if (h === 16)          return ['nov22/h16a.mp4', 'nov22/h16b.mp4'];
-      if (h === 17)          return ['nov22/h17.mp4'];
-      return ['nov22/h18.mp4'];
-    }
-    if (d >= NOV_START) {
-      if (h >= 7 && h < 18) return ['nov/h' + pad(h) + '.mp4'];
-      return ['nov/h18.mp4'];
-    }
-    // ~ 2026-11-14: 10월 영상
-    if (h >= 7 && h < 8)   return ['am7.mp4'];
-    if (h >= 8 && h < 9)   return ['am8a.mp4', 'am8b.mp4'];
-    if (h >= 9 && h < 10)  return ['am9.mp4'];
-    if (h >= 10 && h < 13) return ['bg.mp4', 'am10.mp4'];
-    if (h >= 13 && h < 14) return ['pm1.mp4'];
-    if (h >= 14 && h < 16) return ['pm2.mp4'];
-    if (h >= 16 && h < 17) return ['pm4.mp4', 'pm4b.mp4'];
-    if (h >= 17 && h < 18) return ['pm5.mp4'];
-    if (h >= 18 && h < 22) return ['pm6.mp4'];
-    return ['pm10.mp4'];
+    return activeVersion(d).schedule(d.getHours());
   }
 
   let cur = document.getElementById('vA');
@@ -312,7 +372,7 @@
   const panel = document.getElementById('panel');
   function setLayout(name) {
     document.body.classList.toggle('corner', name === 'corner');
-    panel.querySelectorAll('.opt').forEach(o => o.classList.toggle('sel', o.dataset.layout === name));
+    panel.querySelectorAll('.opt[data-layout]').forEach(o => o.classList.toggle('sel', o.dataset.layout === name));
     try { localStorage.setItem('clockLayout', name); } catch (e) {}
   }
   let saved = 'center';
@@ -326,16 +386,66 @@
     hideTimer = setTimeout(() => { if (!panel.classList.contains('open')) menuBtn.classList.remove('show'); }, 3500);
   }
   function closePanel() {
+    if (panel.classList.contains('editing')) editBtn.click();   // 수정 중이면 저장하고 닫기
     panel.classList.remove('open');
     clearTimeout(hideTimer);
     hideTimer = setTimeout(() => menuBtn.classList.remove('show'), 1500);
   }
+  // ── 섬 영상 버전 선택 + 이름 수정 ──
+  const vers = document.getElementById('vers');
+  const editBtn = document.getElementById('editBtn');
+  function renderVersions() {
+    const latest = autoVersion(new Date());
+    const chips = [{ id: 'auto', thumb: latest.thumb, auto: true }, ...VERSIONS];
+    vers.innerHTML = '';
+    for (const v of chips) {
+      const el = document.createElement('div');
+      el.className = 'opt ver' + (v.id === chosen ? ' sel' : '');
+      el.dataset.v = v.id;
+      el.innerHTML = '<span class="thumb"></span><span class="lbl"></span><input maxlength="12">';
+      el.querySelector('.thumb').style.backgroundImage = 'url(' + v.thumb + ')';
+      if (v.auto) el.querySelector('.thumb').innerHTML = '<b>AUTO</b>';
+      el.querySelector('.lbl').textContent = v.auto ? '자동 (최신)' : nameOf(v);
+      if (!v.auto) el.querySelector('input').value = nameOf(v);
+      vers.appendChild(el);
+    }
+  }
+  function chooseVersion(id) {
+    chosen = id; store.set('islandVersion', id);
+    renderVersions();
+    checkSchedule();
+  }
+  function saveNames() {
+    vers.querySelectorAll('.ver').forEach(el => {
+      const v = VERSIONS.find(x => x.id === el.dataset.v);
+      if (!v) return;
+      const t = el.querySelector('input').value.trim();
+      if (t && t !== v.label) names[v.id] = t; else delete names[v.id];
+    });
+    store.set('islandVersionNames', JSON.stringify(names));
+  }
+  editBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    const editing = panel.classList.toggle('editing');
+    editBtn.classList.toggle('on', editing);
+    editBtn.textContent = editing ? '완료' : '이름 수정';
+    if (!editing) { saveNames(); renderVersions(); }
+  });
+  vers.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); editBtn.click(); } });
+  renderVersions();
+
   menuBtn.addEventListener('click', e => {
     e.stopPropagation();
     panel.classList.contains('open') ? closePanel() : (panel.classList.add('open'), clearTimeout(hideTimer));
   });
   panel.addEventListener('click', e => {
     e.stopPropagation();
+    if (e.target.closest('input')) return;
+    const ver = e.target.closest('.ver');
+    if (ver) {
+      if (panel.classList.contains('editing')) return;
+      chooseVersion(ver.dataset.v); setTimeout(closePanel, 350); return;
+    }
     const o = e.target.closest('.opt');
     if (o) { setLayout(o.dataset.layout); setTimeout(closePanel, 350); }
   });
