@@ -141,8 +141,20 @@
   //   오전 7시 ~ 오후 6시 : 그 시간에 찍은 영상 (nov/h07 ~ nov/h17)
   //   오후 6시 ~ 다음날 오전 7시 : 밤 영상 (nov/h18)
   const NOV_START = new Date(2026, 10, 15);   // 2026-11-15 00:00 (기기 시간 기준)
+  // 2026-11-22부터: 11월 22일 영상 (촬영 시각 기준)
+  //   7·8·9·10·11시 : 그 시간 영상 / 12시~2시 : 12시 영상 / 2시·3시 : 그 시간 영상
+  //   4시 : 4시 영상 두 개 번갈아 / 5시 : 5시 영상 / 오후 6시 ~ 다음날 오전 7시 : 밤 영상
+  const NOV22_START = new Date(2026, 10, 22);
   function playlistFor(d) {
     const h = d.getHours();
+    if (d >= NOV22_START) {
+      if (h >= 7 && h < 12)  return ['nov22/h' + pad(h) + '.mp4'];
+      if (h >= 12 && h < 14) return ['nov22/h12.mp4'];
+      if (h >= 14 && h < 16) return ['nov22/h' + pad(h) + '.mp4'];
+      if (h === 16)          return ['nov22/h16a.mp4', 'nov22/h16b.mp4'];
+      if (h === 17)          return ['nov22/h17.mp4'];
+      return ['nov22/h18.mp4'];
+    }
     if (d >= NOV_START) {
       if (h >= 7 && h < 18) return ['nov/h' + pad(h) + '.mp4'];
       return ['nov/h18.mp4'];
